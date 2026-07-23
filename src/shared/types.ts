@@ -138,4 +138,5 @@ export interface SystemSettings {
   cfApiToken?: string;
   cfAccountId?: string;
   cfWorkerName?: string;
+  corsProxyUrl?: string;
 }

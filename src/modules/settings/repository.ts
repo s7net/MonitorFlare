@@ -69,6 +69,7 @@ export class SettingsRepository {
         cfApiToken: map.get('cf_api_token') || '',
         cfAccountId: map.get('cf_account_id') || '',
         cfWorkerName: map.get('cf_worker_name') || '',
+        corsProxyUrl: map.get('cors_proxy_url') || 'https://monitorflare-cors-proxy.glynet.org',
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -99,6 +100,7 @@ export class SettingsRepository {
       cfApiToken: 'cf_api_token',
       cfAccountId: 'cf_account_id',
       cfWorkerName: 'cf_worker_name',
+      corsProxyUrl: 'cors_proxy_url',
     };
 
     for (const [prop, val] of Object.entries(newSettings)) {

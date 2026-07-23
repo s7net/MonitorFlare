@@ -611,7 +611,7 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                       Enter your Cloudflare API Token once to enable 1-Click background updates. The token is stored securely in your D1 database settings.
                     </p>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
                         <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Cloudflare API Token</label>
                         <input type="password" id="setting-cfApiToken" class="shad-input font-mono" placeholder="Paste cfut_... or API Token" />
@@ -622,7 +622,11 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                       </div>
                       <div>
                         <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Worker Script Name (Optional)</label>
-                        <input type="text" id="setting-cfWorkerName" class="shad-input font-mono" placeholder="e.g. flare-1m07 or monitorflare" />
+                        <input type="text" id="setting-cfWorkerName" class="shad-input font-mono" placeholder="Auto-detected or e.g. flare-1m07" />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">CORS Proxy URL (Default)</label>
+                        <input type="text" id="setting-corsProxyUrl" class="shad-input font-mono" placeholder="https://monitorflare-cors-proxy.glynet.org" />
                       </div>
                     </div>
 
@@ -1817,11 +1821,12 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
             const token = (document.getElementById('setting-cfApiToken').value || '').trim();
             const accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
             const workerName = (document.getElementById('setting-cfWorkerName').value || '').trim();
+            const corsProxyUrl = (document.getElementById('setting-corsProxyUrl').value || '').trim() || 'https://monitorflare-cors-proxy.glynet.org';
             try {
               const res = await fetch(BASE + '/api/admin/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId, cfWorkerName: workerName })
+                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId, cfWorkerName: workerName, corsProxyUrl: corsProxyUrl })
               });
               if (!res.ok) {
                 const text = await res.text();

@@ -173,12 +173,29 @@ export const monitoringRoutes = new Elysia({ prefix: '/api' })
     }
   })
 
-  .post('/services', async ({ headers, body, monitoringService, authService }) => {
+  .post('/services', async ({ headers, body, monitoringService, healthRepository, authService, store }) => {
     const isAdmin = await authService.verifyCookie(headers.cookie);
     if (!isAdmin) return ResponseHelper.error('Unauthorized', 401);
 
     try {
       const result = await monitoringService.createService(body as any);
+
+      // Run immediate initial health check so service status and lastCheckedAt update instantly
+      try {
+        const env = store as unknown as Env;
+        const db = createDatabase(env.DB);
+        const monitoringRepo = new (await import('./repository')).MonitoringRepository(db);
+        const notificationRepo = new (await import('../notifications/repository')).NotificationRepository(db);
+        const settingsRepo = new (await import('../settings/repository')).SettingsRepository(db);
+        const settings = await settingsRepo.getAllSettings();
+        const notificationService = new (await import('../notifications/service')).NotificationService(notificationRepo, env, settings);
+        const healthChecker = new (await import('../health/checker')).HealthChecker(healthRepository, monitoringRepo, notificationService, settings);
+
+        await healthChecker.checkService(result, settings.baseUrl || '');
+      } catch (checkErr) {
+        console.error('[Monitoring] Immediate check error:', checkErr);
+      }
+
       return { success: true, service: result };
     } catch (error) {
       console.error('[Monitoring] Create error:', error);

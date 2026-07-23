@@ -154,4 +154,92 @@ export const settingsRoutes = new Elysia({ prefix: '/api' })
     } else {
       return ResponseHelper.error('Failed to send backup file to Telegram. Check bot token and backup chat ID.', 500);
     }
+  })
+
+  // Admin: 1-Click System Update (Runs 100% server-side inside Worker, NO CORS Proxy needed!)
+  .post('/admin/system-update', async ({ headers, settingsRepo, authService, env }) => {
+    const isAdmin = await authService.verifyCookie(headers.cookie);
+    if (!isAdmin) return ResponseHelper.error('Unauthorized', 401);
+
+    try {
+      const settings = await settingsRepo.getAllSettings();
+      const apiToken = (settings.cfApiToken || (env as any).CF_API_TOKEN || '').trim();
+      if (!apiToken) {
+        return ResponseHelper.error('Cloudflare API Token not found. Please enter and save your token in Cloudflare Update Authorization section first.', 400);
+      }
+
+      // 1. Download latest compiled worker bundle code from GitHub
+      const bundleRes = await fetch('https://raw.githubusercontent.com/s7net/MonitorFlare-installer/main/public/worker-bundle.js');
+      if (!bundleRes.ok) {
+        return ResponseHelper.error('Failed to download latest release bundle from GitHub.', 500);
+      }
+      const bundleCode = await bundleRes.text();
+
+      // 2. Get Account ID
+      let accountId = (settings.cfAccountId || (env as any).CF_ACCOUNT_ID || '').trim();
+      if (!accountId) {
+        const accRes = await fetch('https://api.cloudflare.com/client/v4/accounts', {
+          headers: { Authorization: `Bearer ${apiToken}` },
+        });
+        const accData = (await accRes.json()) as any;
+        if (accData.success && accData.result && accData.result.length > 0) {
+          accountId = accData.result[0].id;
+        } else {
+          return ResponseHelper.error('Could not auto-detect Cloudflare Account ID. Please enter it manually in settings.', 400);
+        }
+      }
+
+      // 3. Find script name on Cloudflare
+      let scriptName = 'monitorflare';
+      const scriptListRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+      });
+      const scriptListData = (await scriptListRes.json()) as any;
+      if (scriptListData.success && scriptListData.result && scriptListData.result.length > 0) {
+        const match = scriptListData.result.find((s: any) => s.id.startsWith('flare-') || s.id.startsWith('monitorflare'));
+        if (match) scriptName = match.id;
+      }
+
+      // 4. Get script details to preserve D1 DB binding
+      const scriptDetailRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+      });
+      const scriptDetailData = (await scriptDetailRes.json()) as any;
+      let dbBindingId = '';
+      if (scriptDetailData.result && scriptDetailData.result.bindings) {
+        const dbBinding = scriptDetailData.result.bindings.find((b: any) => b.type === 'd1' || b.name === 'DB');
+        if (dbBinding) dbBindingId = dbBinding.id || dbBinding.database_id;
+      }
+
+      // 5. Upload updated script via Cloudflare REST API (Direct server fetch, no proxy!)
+      const formData = new FormData();
+      const metadataObj = {
+        main_module: 'index.js',
+        compatibility_date: '2024-09-23',
+        compatibility_flags: ['nodejs_compat_v2'],
+        bindings: dbBindingId ? [{ name: 'DB', type: 'd1', id: dbBindingId }] : [],
+      };
+
+      formData.append('metadata', new Blob([JSON.stringify(metadataObj)], { type: 'application/json' }));
+      formData.append('index.js', new Blob([bundleCode], { type: 'application/javascript+module' }), 'index.js');
+
+      const uploadRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${scriptName}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${apiToken}` },
+        body: formData,
+      });
+
+      const uploadData = (await uploadRes.json()) as any;
+      if (uploadRes.ok && uploadData.success) {
+        return {
+          success: true,
+          message: '✓ MonitorFlare upgraded successfully to latest release!',
+          scriptName,
+        };
+      } else {
+        return ResponseHelper.error(uploadData.errors?.[0]?.message || 'Cloudflare API upload failed', 500);
+      }
+    } catch (err: any) {
+      return ResponseHelper.error(err.message || 'System update error', 500);
+    }
   });

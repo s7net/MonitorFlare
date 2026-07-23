@@ -139,4 +139,5 @@ export interface SystemSettings {
   cfAccountId?: string;
   cfWorkerName?: string;
   corsProxyUrl?: string;
+  autoUpdateGithub?: boolean;
 }

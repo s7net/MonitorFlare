@@ -630,6 +630,17 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                       </div>
                     </div>
 
+                    <div class="pt-3 border-t border-[hsl(var(--border))] flex items-center justify-between flex-wrap gap-3">
+                      <div>
+                        <span class="text-xs font-semibold text-foreground">🔄 Auto-Update from GitHub Releases</span>
+                        <p class="text-[11px] text-[hsl(var(--muted-foreground))] m-0">Automatically fetch and apply the latest worker-bundle.js from GitHub in the background every 24 hours</p>
+                      </div>
+                      <label class="shad-switch">
+                        <input type="checkbox" id="setting-autoUpdateGithub" onchange="saveUpdateToken(event)" />
+                        <span class="shad-slider"></span>
+                      </label>
+                    </div>
+
                     <div class="flex justify-end">
                       <button onclick="saveUpdateToken(event)" class="shad-btn shad-btn-primary text-xs">
                         💾 Save Cloudflare Update Credentials
@@ -1822,11 +1833,12 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
             const accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
             const workerName = (document.getElementById('setting-cfWorkerName').value || '').trim();
             const corsProxyUrl = (document.getElementById('setting-corsProxyUrl').value || '').trim() || 'https://monitorflare-cors-proxy.glynet.org';
+            const autoUpdateGithub = document.getElementById('setting-autoUpdateGithub') ? document.getElementById('setting-autoUpdateGithub').checked : false;
             try {
               const res = await fetch(BASE + '/api/admin/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId, cfWorkerName: workerName, corsProxyUrl: corsProxyUrl })
+                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId, cfWorkerName: workerName, corsProxyUrl: corsProxyUrl, autoUpdateGithub: autoUpdateGithub })
               });
               if (!res.ok) {
                 const text = await res.text();

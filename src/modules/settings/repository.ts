@@ -70,6 +70,7 @@ export class SettingsRepository {
         cfAccountId: map.get('cf_account_id') || '',
         cfWorkerName: map.get('cf_worker_name') || '',
         corsProxyUrl: map.get('cors_proxy_url') || 'https://monitorflare-cors-proxy.glynet.org',
+        autoUpdateGithub: map.get('auto_update_github') === 'true',
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -101,6 +102,7 @@ export class SettingsRepository {
       cfAccountId: 'cf_account_id',
       cfWorkerName: 'cf_worker_name',
       corsProxyUrl: 'cors_proxy_url',
+      autoUpdateGithub: 'auto_update_github',
     };
 
     for (const [prop, val] of Object.entries(newSettings)) {

@@ -1478,6 +1478,7 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                       </div>
                     </div>
                     <div class="flex gap-2 items-center">
+                      <button onclick="testNotif('\${n.id}')" class="shad-btn bg-brand/10 border border-brand/30 text-brand font-semibold hover:bg-brand/20">🧪 Test Notification</button>
                       <button onclick='editNotif(\${JSON.stringify(n).replace(/'/g, "\\\\'")})' class="shad-btn">Edit</button>
                       <button onclick="deleteNotif('\${n.id}')" class="shad-btn shad-btn-danger">Delete</button>
                     </div>
@@ -1485,6 +1486,20 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                 </div>
               \`).join('');
             } catch (e) { console.error(e); }
+          }
+
+          async function testNotif(id) {
+            try {
+              const res = await fetch(BASE + '/api/notifications/' + id + '/test', { method: 'POST' });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                alert('✓ Test notification sent successfully to notification channel!');
+              } else {
+                alert('✗ Test notification failed: ' + (data.error || 'Check notification configuration settings'));
+              }
+            } catch (err) {
+              alert('Error sending test notification: ' + err.message);
+            }
           }
 
           function openNotifModal() {

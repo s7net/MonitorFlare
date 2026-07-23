@@ -112,13 +112,19 @@ export const notificationRoutes = new Elysia({ prefix: '/api' })
         await TelegramProvider.sendMessage(
           botToken,
           chatId,
-          '🔔 *TEST NOTIFICATION*\n\nYour MonitorFlare Telegram integration is working perfectly!',
+          '🧪 *MONITORFLARE TEST NOTIFICATION*\n\nYour MonitorFlare Telegram notification integration is working perfectly!',
           baseUrl,
           testService.id,
           testService.url
         );
       } else if (notification.type === 'slack') {
         await SlackProvider.send(notification.config as any, testService, testIncident, baseUrl);
+      } else if (notification.type === 'discord') {
+        const { DiscordProvider } = await import('./providers/discord');
+        await DiscordProvider.send(notification.config?.webhookUrl, 'down', testService, { responseTime: 120, statusCode: 500, error: 'Test Notification' });
+      } else if (notification.type === 'webhook') {
+        const { CustomWebhookProvider } = await import('./providers/webhook');
+        await CustomWebhookProvider.send(notification.config?.webhookUrl, notification.config?.secretHeader, 'down', testService, { responseTime: 120, statusCode: 500, error: 'Test Notification' });
       }
 
       return { success: true };

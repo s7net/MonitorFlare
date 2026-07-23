@@ -263,12 +263,33 @@ export const monitoringRoutes = new Elysia({ prefix: '/api' })
     }
   })
 
-  .put('/services/:id', async ({ headers, params, body, monitoringService, authService }) => {
+  .put('/services/:id', async ({ headers, params, body, monitoringService, healthRepository, authService, store }) => {
     const isAdmin = await authService.verifyCookie(headers.cookie);
     if (!isAdmin) return ResponseHelper.error('Unauthorized', 401);
 
     try {
-      await monitoringService.updateService(params.id, body as any);
+      const updateData = { ...(body as any), consecutiveFails: 0 };
+      await monitoringService.updateService(params.id, updateData);
+
+      // Run immediate initial check right after updating!
+      try {
+        const updatedService = await monitoringService.getServiceById(params.id);
+        if (updatedService) {
+          const env = store as unknown as Env;
+          const db = createDatabase(env.DB);
+          const monitoringRepo = new (await import('./repository')).MonitoringRepository(db);
+          const notificationRepo = new (await import('../notifications/repository')).NotificationRepository(db);
+          const settingsRepo = new (await import('../settings/repository')).SettingsRepository(db);
+          const settings = await settingsRepo.getAllSettings();
+          const notificationService = new (await import('../notifications/service')).NotificationService(notificationRepo, env, settings);
+          const healthChecker = new (await import('../health/checker')).HealthChecker(healthRepository, monitoringRepo, notificationService, settings);
+
+          await healthChecker.checkService(updatedService, settings.baseUrl || '');
+        }
+      } catch (checkErr) {
+        console.error('[Monitoring] Immediate check on update error:', checkErr);
+      }
+
       return { success: true };
     } catch (error) {
       console.error('[Monitoring] Update error:', error);

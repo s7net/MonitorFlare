@@ -11,9 +11,6 @@ import type { Env } from '@/shared/types';
 export const createApp = (env: Env) =>
   new Elysia({ aot: false, name: 'monitorflare' })
     .state('DB', env.DB)
-    .state('BASE_URL', env.BASE_URL || '')
-    .state('ADMIN_PANEL_PATH', env.ADMIN_PANEL_PATH || '/manage-x7k9')
-    .state('ADMIN_USERNAME', env.ADMIN_USERNAME || 'admin')
     .state('ADMIN_PASSWORD', env.ADMIN_PASSWORD || '')
     .state('ADMIN_PASSWORD_HASH', env.ADMIN_PASSWORD_HASH || '')
     .state('SESSION_SECRET', env.SESSION_SECRET || '')

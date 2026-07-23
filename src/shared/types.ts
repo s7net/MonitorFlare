@@ -1,8 +1,5 @@
 export interface Env {
   DB: D1Database;
-  BASE_URL?: string;
-  ADMIN_PANEL_PATH?: string;
-  ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
   ADMIN_PASSWORD_HASH?: string;
   SESSION_SECRET?: string;
@@ -133,4 +130,8 @@ export interface SystemSettings {
   customJs?: string;
   totpEnabled?: boolean;
   totpSecret?: string;
+  // Stored in DB (not wrangler.toml)
+  adminUsername?: string;
+  adminPanelPath?: string;
+  baseUrl?: string;
 }

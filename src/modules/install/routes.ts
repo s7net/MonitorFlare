@@ -64,6 +64,8 @@ export const installRoutes = new Elysia({ prefix: '/api/install' })
     const {
       adminUsername,
       adminPassword,
+      adminPanelPath,
+      baseUrl,
       botToken,
       chatId,
       brandName,
@@ -71,6 +73,8 @@ export const installRoutes = new Elysia({ prefix: '/api/install' })
     } = body as {
       adminUsername?: string;
       adminPassword?: string;
+      adminPanelPath?: string;
+      baseUrl?: string;
       botToken?: string;
       chatId?: string;
       brandName?: string;
@@ -90,6 +94,8 @@ export const installRoutes = new Elysia({ prefix: '/api/install' })
       const settings: Record<string, string> = {
         admin_username: adminUsername,
         admin_password_hash: passwordHash,
+        admin_panel_path: adminPanelPath || '/manage-x7k9',
+        base_url: baseUrl || '',
         brand_name: brandName || 'MonitorFlare Status',
         brand_logo_url: brandLogoUrl || '',
       };

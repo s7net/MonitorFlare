@@ -9,11 +9,14 @@ import type { Env } from '@/shared/types';
 const preAuthTokens = new Map<string, { username: string; expiresAt: number }>();
 
 export const authRoutes = new Elysia({ prefix: '/api' })
-  .derive(({ store }) => {
+  .derive(async ({ store }) => {
     const env = store as unknown as Env;
     const db = createDatabase(env.DB);
     const authService = new AuthService(env);
     const settingsRepository = new SettingsRepository(db);
+    // Load adminUsername from DB (set during installation)
+    const settings = await settingsRepository.getAllSettings();
+    authService.adminUsername = settings.adminUsername || 'admin';
     return { authService, settingsRepository, env };
   })
 
@@ -31,7 +34,7 @@ export const authRoutes = new Elysia({ prefix: '/api' })
     const username = data.username || '';
     const password = data.password || '';
 
-    const expectedUsername = env.ADMIN_USERNAME || 'admin';
+    const expectedUsername = authService.adminUsername;
     const isUserValid = username === expectedUsername;
     const isPassValid = await authService.verifyPassword(password);
 

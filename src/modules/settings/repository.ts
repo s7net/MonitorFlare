@@ -32,6 +32,9 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   customJs: '',
   totpEnabled: false,
   totpSecret: '',
+  adminUsername: 'admin',
+  adminPanelPath: '/manage-x7k9',
+  baseUrl: '',
 };
 
 export class SettingsRepository {
@@ -58,6 +61,9 @@ export class SettingsRepository {
         customJs: map.get('custom_js') || '',
         totpEnabled: map.get('totp_enabled') === 'true' || map.get('totp_enabled') === '1',
         totpSecret: map.get('totp_secret') || '',
+        adminUsername: map.get('admin_username') || DEFAULT_SETTINGS.adminUsername,
+        adminPanelPath: map.get('admin_panel_path') || DEFAULT_SETTINGS.adminPanelPath,
+        baseUrl: map.get('base_url') || DEFAULT_SETTINGS.baseUrl,
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -81,6 +87,9 @@ export class SettingsRepository {
       customJs: 'custom_js',
       totpEnabled: 'totp_enabled',
       totpSecret: 'totp_secret',
+      adminUsername: 'admin_username',
+      adminPanelPath: 'admin_panel_path',
+      baseUrl: 'base_url',
     };
 
     for (const [prop, val] of Object.entries(newSettings)) {

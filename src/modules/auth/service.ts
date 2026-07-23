@@ -4,13 +4,13 @@ import type { Env } from '@/shared/types';
 const failedAttemptsMap = new Map<string, { count: number; resetAt: number }>();
 
 export class AuthService {
-  private adminUsername: string;
   private adminPasswordHash?: string;
   private adminPasswordFallback?: string;
   private sessionSecret: string;
+  // Set after loading from DB; defaults to 'admin' for backward compatibility
+  public adminUsername: string = 'admin';
 
   constructor(env: Env) {
-    this.adminUsername = env.ADMIN_USERNAME || 'admin';
     this.adminPasswordHash = env.ADMIN_PASSWORD_HASH;
     this.adminPasswordFallback = env.ADMIN_PASSWORD || 'admin123';
     this.sessionSecret = env.SESSION_SECRET || 'monitorflare-default-secret-key-change-me';

@@ -5,6 +5,7 @@ import { NotificationService } from './service';
 import { ResponseHelper } from '@/shared/response';
 import { TelegramProvider } from './providers/telegram';
 import { SlackProvider } from './providers/slack';
+import { SettingsRepository } from '../settings/repository';
 import type { Service, Env } from '@/shared/types';
 
 export const notificationRoutes = new Elysia({ prefix: '/api' })
@@ -98,7 +99,9 @@ export const notificationRoutes = new Elysia({ prefix: '/api' })
         error: 'This is a test notification',
       };
 
-      const baseUrl = (store as any).BASE_URL || 'http://localhost:3000';
+      const settingsRepo = new SettingsRepository(createDatabase((store as unknown as Env).DB));
+      const siteSettings = await settingsRepo.getAllSettings();
+      const baseUrl = siteSettings.baseUrl || 'http://localhost:3000';
 
       if (notification.type === 'telegram') {
         const botToken = notification.config?.botToken;

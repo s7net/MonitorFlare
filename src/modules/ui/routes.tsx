@@ -8,6 +8,7 @@ import { createDatabase } from '@/shared/database';
 import { MonitoringRepository } from '../monitoring/repository';
 import { HealthRepository } from '../health/repository';
 import { AuthService } from '../auth/service';
+import { SettingsRepository } from '../settings/repository';
 import type { Env } from '@/shared/types';
 
 export const uiRoutes = new Elysia({ aot: false })
@@ -15,9 +16,13 @@ export const uiRoutes = new Elysia({ aot: false })
 
   .get('/', async ({ headers, store, html }) => {
     const env = store as unknown as Env;
+    const db = createDatabase(env.DB);
+    const settingsRepo = new SettingsRepository(db);
+    const settings = await settingsRepo.getAllSettings();
     const authService = new AuthService(env);
+    authService.adminUsername = settings.adminUsername || 'admin';
     const isAdmin = await authService.verifyCookie(headers.cookie);
-    const adminPath = env.ADMIN_PANEL_PATH || '/manage-x7k9';
+    const adminPath = settings.adminPanelPath || '/manage-x7k9';
     return html(<MonitorOverview isAdmin={isAdmin} adminPath={adminPath} />);
   })
 
@@ -28,12 +33,16 @@ export const uiRoutes = new Elysia({ aot: false })
   // Configurable Admin Login and Dashboard routes
   .all('*', async ({ path, headers, store, html, set }) => {
     const env = store as unknown as Env;
-    const adminPath = env.ADMIN_PANEL_PATH || '/manage-x7k9';
+    const db = createDatabase(env.DB);
+    const settingsRepo = new SettingsRepository(db);
+    const settings = await settingsRepo.getAllSettings();
+    const adminPath = settings.adminPanelPath || '/manage-x7k9';
     const loginPath = `${adminPath}/login`;
 
     const cleanPath = (path.length > 1 && path.endsWith('/')) ? path.slice(0, -1) : path;
 
     const authService = new AuthService(env);
+    authService.adminUsername = settings.adminUsername || 'admin';
     const isAdmin = await authService.verifyCookie(headers.cookie);
 
     if (cleanPath === loginPath) {

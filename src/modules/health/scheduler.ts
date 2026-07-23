@@ -30,7 +30,7 @@ export class HealthScheduler {
 
     await Promise.all(
       services.map(service =>
-        healthChecker.checkService(service, this.env.BASE_URL || '')
+        healthChecker.checkService(service, settings.baseUrl || '')
       )
     );
 

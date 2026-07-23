@@ -13,6 +13,14 @@ export const installRoutes = new Elysia({ prefix: '/api/install' })
     return { installed };
   })
 
+  // Return public installer configuration (e.g. CORS proxy URL from wrangler.toml [vars])
+  .get('/config', ({ store }) => {
+    const env = store as unknown as Env;
+    return {
+      corsProxyUrl: env.CORS_PROXY_URL || '',
+    };
+  })
+
   // Test Telegram Notification in Installer
   .post('/test-telegram', async ({ body, store }) => {
     const { botToken, chatId } = body as { botToken: string; chatId: string };

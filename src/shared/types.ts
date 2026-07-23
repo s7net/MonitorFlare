@@ -9,6 +9,7 @@ export interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   TELEGRAM_BACKUP_CHAT_ID?: string;
+  CORS_PROXY_URL?: string;
 }
 
 export type CheckType = 'direct' | 'globalping' | 'heartbeat';

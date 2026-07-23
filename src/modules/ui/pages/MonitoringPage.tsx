@@ -1,188 +1,290 @@
-import { Html } from '@elysiajs/html'
+import { Html } from '@elysiajs/html';
 
 interface Props {
   service: any;
   checks: any[];
   uptime: number;
   isAdmin?: boolean;
+  adminPath?: string;
 }
 
-export function MonitoringPage({ service, checks, uptime, isAdmin = false }: Props) {
-  const avgResponse = checks.length 
-    ? Math.round(checks.reduce((a: number, c: any) => a + c.responseTime, 0) / checks.length) 
+export function MonitoringPage({ service, checks, uptime, isAdmin = false, adminPath = '/manage-x7k9' }: Props) {
+  const avgResponse = checks.length
+    ? Math.round(checks.reduce((a: number, c: any) => a + c.responseTime, 0) / checks.length)
     : 0;
-  
+
+  const maxResponse = checks.length
+    ? Math.max(...checks.map((c: any) => c.responseTime))
+    : 0;
+
   const failedChecks = checks.filter((c: any) => c.status === 'unhealthy').length;
   const recentIncidents = checks.filter((c: any) => c.status === 'unhealthy').slice(0, 20);
 
+  const isDown = service.lastStatus === 'unhealthy';
+
   return (
-    <html>
+    <html lang="en" data-theme="system">
       <head>
         <meta charset="UTF-8" />
-        <title>{service.name} - Monitoring</title>
-        <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{service.name} - Detailed Monitoring</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <script src="https://cdn.tailwindcss.com"></script>
         <style>{`
-          body { background: #fafafa; margin: 0; }
-          .timeline-row {
-            display: flex; gap: 2px; background: white;
-            padding: 16px; border-radius: 6px; border: 1px solid #e5e5e5;
+          :root {
+            --background: 0 0% 100%;
+            --foreground: 240 10% 3.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 240 10% 3.9%;
+            --muted: 240 4.8% 95.9%;
+            --muted-foreground: 240 3.8% 46.1%;
+            --border: 240 5.9% 90%;
+            --brand-color: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
           }
+
+          [data-theme="dark"] {
+            --background: 240 10% 3.9%;
+            --foreground: 0 0% 98%;
+            --card: 240 10% 4.9%;
+            --card-foreground: 0 0% 98%;
+            --muted: 240 3.7% 15.9%;
+            --muted-foreground: 240 5% 64.9%;
+            --border: 240 3.7% 15.9%;
+          }
+
+          @media (prefers-color-scheme: dark) {
+            [data-theme="system"] {
+              --background: 240 10% 3.9%;
+              --foreground: 0 0% 98%;
+              --card: 240 10% 4.9%;
+              --card-foreground: 0 0% 98%;
+              --muted: 240 3.7% 15.9%;
+              --muted-foreground: 240 5% 64.9%;
+              --border: 240 3.7% 15.9%;
+            }
+          }
+
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            margin: 0;
+            padding: 0;
+          }
+
+          .shad-card {
+            background-color: hsl(var(--card));
+            color: hsl(var(--card-foreground));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+          }
+
+          .shad-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+          }
+          .shad-badge-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+          }
+          .shad-badge-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+          }
+
           .timeline-bar {
-            flex: 1; height: 40px; border-radius: 2px;
-            transition: all 0.2s; cursor: pointer;
+            flex: 1;
+            height: 32px;
+            border-radius: 3px;
+            transition: all 0.15s ease;
+            cursor: pointer;
           }
-          .timeline-bar:hover { opacity: 0.8; transform: scaleY(1.05); }
-          .status-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
-          }
-          .operational { background: #d1fae5; color: #065f46; }
-          .degraded { background: #fef3c7; color: #92400e; }
-          .down { background: #fee2e2; color: #991b1b; }
+          .timeline-bar:hover { opacity: 0.8; transform: scaleY(1.08); }
         `}</style>
       </head>
       <body>
-        <div style="padding: 40px 20px; max-width: 100%; min-height: 100vh;">
-          <div style="max-width: 1400px; margin: 0 auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
-              <a href="/" style="display: inline-block; color: #666; text-decoration: none; font-size: 14px;">
-                ← Back to all services
+        <div class="max-w-5xl mx-auto px-4 py-10">
+          <div class="flex justify-between items-center mb-8">
+            <a href="/" class="text-xs text-[hsl(var(--muted-foreground))] hover:underline font-medium">← Back to Overview</a>
+            {isAdmin && (
+              <a href={adminPath} class="text-xs font-semibold px-3 py-1.5 rounded-md bg-[var(--brand-color)] text-white no-underline">
+                Admin Dashboard
               </a>
-              {isAdmin && (
-                <a
-                  href="/admin"
-                  style="
-                    padding: 8px 16px;
-                    background: #000;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    text-decoration: none;
-                    display: inline-block;
-                  "
-                >
-                  Admin Dashboard
-                </a>
+            )}
+          </div>
+
+          <div class="mb-8">
+            <div class="flex items-center gap-3 flex-wrap mb-2">
+              <h1 class="text-3xl font-bold tracking-tight m-0">{service.name}</h1>
+              <span class={`shad-badge ${isDown ? 'shad-badge-danger' : 'shad-badge-success'}`}>
+                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                {isDown ? 'Major Outage' : 'Operational'}
+              </span>
+              {service.groupName && (
+                <span class="text-xs uppercase font-bold px-2 py-0.5 rounded bg-muted text-[hsl(var(--muted-foreground))]">
+                  {service.groupName}
+                </span>
               )}
             </div>
-            <div style="margin-bottom: 50px;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
-                <h1 style="font-size: 36px; font-weight: 600; margin: 0;">{service.name}</h1>
-                <span class={`status-badge ${uptime >= 99 ? 'operational' : uptime >= 95 ? 'degraded' : 'down'}`}>
-                  <div style="width: 8px; height: 8px; border-radius: 50%; background: currentColor;"></div>
-                  {uptime >= 99 ? 'Operational' : uptime >= 95 ? 'Degraded Performance' : 'Major Outage'}
-                </span>
-              </div>
-              <a href={service.url} target="_blank" style="color: #666; font-size: 14px; text-decoration: none; word-break: break-all;">
+
+            {service.url ? (
+              <a href={service.url} target="_blank" rel="noopener" class="text-xs text-[hsl(var(--muted-foreground))] hover:underline break-all">
                 {service.url}
               </a>
-            </div>
+            ) : (
+              <span class="text-xs text-[hsl(var(--muted-foreground))]">(Target Hidden)</span>
+            )}
+          </div>
 
-            <div style="background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 30px; margin-bottom: 40px;">
-              <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px;">
-                <div>
-                  <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Uptime (24h)</div>
-                  <div style={`font-size: 36px; font-weight: 600; color: ${uptime >= 99 ? '#10b981' : uptime >= 95 ? '#f59e0b' : '#ef4444'};`}>
-                    {uptime.toFixed(2)}%
-                  </div>
-                </div>
-                <div>
-                  <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Total Checks</div>
-                  <div style="font-size: 36px; font-weight: 600;">{checks.length}</div>
-                </div>
-                <div>
-                  <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Failed Checks</div>
-                  <div style="font-size: 36px; font-weight: 600; color: #ef4444;">
-                    {failedChecks}
-                  </div>
-                </div>
-                <div>
-                  <div style="font-size: 13px; color: #666; margin-bottom: 8px;">Avg Response</div>
-                  <div style="font-size: 36px; font-weight: 600;">
-                    {avgResponse}<span style="font-size: 20px; color: #666;">ms</span>
-                  </div>
+          {/* Stats Grid */}
+          <div class="shad-card p-6 mb-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <div class="text-xs text-[hsl(var(--muted-foreground))] mb-1">Uptime (24h)</div>
+                <div class="text-3xl font-bold" style={`color: ${isDown ? 'var(--danger)' : 'var(--success)'}`}>
+                  {uptime.toFixed(2)}%
                 </div>
               </div>
-            </div>
-
-            <div style="margin-bottom: 40px;">
-              <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px;">Uptime over the past 24 hours</h2>
-              <div class="timeline-row" id="timeline-container"></div>
-              <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; color: #999;">
-                <span>24 hours ago</span>
-                <span>Now</span>
+              <div>
+                <div class="text-xs text-[hsl(var(--muted-foreground))] mb-1">Total Checks</div>
+                <div class="text-3xl font-bold">{checks.length}</div>
               </div>
-            </div>
-
-            <div style="display: flex; gap: 20px; margin-bottom: 40px; font-size: 13px; flex-wrap: wrap;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 16px; height: 16px; background: #10b981; border-radius: 2px;"></div>
-                <span style="color: #666;">Operational</span>
+              <div>
+                <div class="text-xs text-[hsl(var(--muted-foreground))] mb-1">Failed Checks</div>
+                <div class="text-3xl font-bold style='color: var(--danger);'">{failedChecks}</div>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 16px; height: 16px; background: #f59e0b; border-radius: 2px;"></div>
-                <span style="color: #666;">Degraded</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 16px; height: 16px; background: #ef4444; border-radius: 2px;"></div>
-                <span style="color: #666;">Down</span>
-              </div>
-            </div>
-
-            <div>
-              <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px;">Recent Incidents</h2>
-              <div id="incidents">
-                {recentIncidents.length === 0 ? (
-                  <div style="background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 40px; text-align: center; color: #999;">
-                    <svg style="width: 48px; height: 48px; margin: 0 auto 16px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <div>No incidents in the last 24 hours</div>
-                  </div>
-                ) : (
-                  recentIncidents.map((incident: any) => (
-                    <div style="background: white; border: 1px solid #e5e5e5; border-left: 4px solid #ef4444; border-radius: 8px; padding: 20px; margin-bottom: 12px;">
-                      <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 200px;">
-                          <div style="font-weight: 600; margin-bottom: 4px; color: #ef4444;">Service Down</div>
-                          <div style="font-size: 13px; color: #666;">Response time: {incident.responseTime}ms</div>
-                          {incident.statusCode && <div style="font-size: 13px; color: #666; margin-top: 2px;">HTTP Status: {incident.statusCode}</div>}
-                          {incident.error && (
-                            <div style="font-size: 13px; color: #666; margin-top: 4px; padding: 8px; background: #fef2f2; border-radius: 4px;">
-                              {incident.error}
-                            </div>
-                          )}
-                        </div>
-                        <div style="text-align: right; font-size: 13px; color: #999; white-space: nowrap;">
-                          {new Date(incident.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div>
+                <div class="text-xs text-[hsl(var(--muted-foreground))] mb-1">Avg Latency</div>
+                <div class="text-3xl font-bold">{avgResponse}<span class="text-sm font-normal text-[hsl(var(--muted-foreground))]">ms</span></div>
               </div>
             </div>
           </div>
+
+          {/* Response Time Latency Trend SVG Chart */}
+          <div class="shad-card p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-base font-semibold tracking-tight m-0">Response Time Latency Trend (ms)</h2>
+              <div class="text-xs text-[hsl(var(--muted-foreground))] font-semibold">Peak: {maxResponse}ms</div>
+            </div>
+            <div class="w-full h-44 relative" id="chart-container">
+              <svg id="latency-svg" class="w-full h-full overflow-visible"></svg>
+            </div>
+          </div>
+
+          {/* Timeline Bar */}
+          <div class="mb-10">
+            <h2 class="text-base font-semibold tracking-tight mb-4">Uptime History (Last 24 Hours)</h2>
+            <div class="shad-card p-4 flex gap-1" id="timeline-container"></div>
+            <div class="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mt-2">
+              <span>24 hours ago</span>
+              <span>Now</span>
+            </div>
+          </div>
+
+          {/* Incidents History */}
+          <div>
+            <h2 class="text-base font-semibold tracking-tight mb-4">Recent Service Incidents</h2>
+            <div id="incidents-history">
+              {recentIncidents.length === 0 ? (
+                <div class="shad-card p-10 text-center text-xs text-[hsl(var(--muted-foreground))]">
+                  No outage incidents recorded in the last 24 hours.
+                </div>
+              ) : (
+                recentIncidents.map((inc: any) => (
+                  <div class="shad-card p-5 border-l-4 border-l-red-500 mb-3">
+                    <div class="flex justify-between flex-wrap gap-3">
+                      <div>
+                        <div class="text-xs font-semibold text-[var(--danger)] mb-1">Service Outage</div>
+                        <div class="text-xs text-[hsl(var(--muted-foreground))]">Response time: {inc.responseTime}ms • HTTP Status: {inc.statusCode || 'Failed'} • Region: {inc.region || 'Direct'}</div>
+                        {inc.error && (
+                          <div class="text-xs mt-2 p-2 rounded bg-red-500/10 text-[var(--danger)]">
+                            {inc.error}
+                          </div>
+                        )}
+                      </div>
+                      <div class="text-xs text-[hsl(var(--muted-foreground))]">
+                        {new Date(inc.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
+
         <script>{`
-          const checks = ${JSON.stringify(checks.slice(0, 1440).reverse())};
+          const checks = ${JSON.stringify(checks.slice(0, 90).reverse())};
           const container = document.getElementById('timeline-container');
+          
           if (checks.length === 0) {
-            container.innerHTML = '<div class="timeline-bar" style="background: #e5e5e5;"></div>';
+            container.innerHTML = '<div class="timeline-bar" style="background: hsl(var(--muted));"></div>';
           } else {
-            checks.forEach(check => {
+            checks.forEach(c => {
               const bar = document.createElement('div');
               bar.className = 'timeline-bar';
-              if (check.status === 'healthy') {
-                bar.style.background = check.responseTime > 1000 ? '#f59e0b' : '#10b981';
-              } else {
-                bar.style.background = '#ef4444';
-              }
+              const isHealthy = c.status === 'healthy';
+              bar.style.background = isHealthy ? (c.responseTime > 1000 ? 'var(--warning)' : 'var(--success)') : 'var(--danger)';
+              bar.title = \`\${c.status.toUpperCase()} | Latency: \${c.responseTime}ms | Region: \${c.region || 'Direct'} | \${new Date(c.timestamp).toLocaleString()}\`;
               container.appendChild(bar);
             });
           }
+
+          // Render Latency SVG Chart
+          function renderLatencyChart() {
+            const svg = document.getElementById('latency-svg');
+            if (!svg || checks.length < 2) return;
+
+            const width = svg.clientWidth || 800;
+            const height = svg.clientHeight || 170;
+            const padding = 20;
+
+            const latencies = checks.map(c => c.responseTime || 0);
+            const maxL = Math.max(...latencies, 50);
+            const minL = 0;
+
+            const points = checks.map((c, i) => {
+              const x = padding + (i / (checks.length - 1)) * (width - 2 * padding);
+              const y = height - padding - ((c.responseTime - minL) / (maxL - minL)) * (height - 2 * padding);
+              return { x, y, val: c.responseTime, status: c.status };
+            });
+
+            const pathD = points.reduce((acc, p, i) => i === 0 ? \`M \${p.x} \${p.y}\` : \`\${acc} L \${p.x} \${p.y}\`, '');
+            const areaD = \`\${pathD} L \${points[points.length - 1].x} \${height - padding} L \${points[0].x} \${height - padding} Z\`;
+
+            svg.innerHTML = \`
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#6366f1" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+              <path d="\${areaD}" fill="url(#chartGrad)" />
+              <path d="\${pathD}" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              \${points.map(p => \`
+                <circle cx="\${p.x}" cy="\${p.y}" r="3" fill="\${p.status === 'healthy' ? '#10b981' : '#ef4444'}" stroke="#ffffff" stroke-width="1">
+                  <title>\${p.val}ms</title>
+                </circle>
+              \`).join('')}
+            \`;
+          }
+
+          renderLatencyChart();
+          window.addEventListener('resize', renderLatencyChart);
         `}</script>
       </body>
     </html>

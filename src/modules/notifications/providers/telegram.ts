@@ -1,70 +1,68 @@
-import type { Service, TelegramConfig } from '@/shared/types';
-
 export class TelegramProvider {
-  static async send(
-    config: TelegramConfig,
-    service: Service,
-    incident: { responseTime: number; statusCode: number; error?: string },
-    baseUrl: string
+  static async sendMessage(
+    botToken: string,
+    chatId: string,
+    message: string,
+    baseUrl?: string,
+    serviceId?: string,
+    serviceUrl?: string
   ): Promise<void> {
-    const statusEmoji = incident.statusCode === 0 ? '💥' : '⚠️';
-    const timeEmoji = incident.responseTime > 5000 ? '🐌' : '⏱️';
+    const keyboard: any = { inline_keyboard: [] };
+    if (baseUrl && serviceId) {
+      keyboard.inline_keyboard.push([{ text: '📊 View Details', url: `${baseUrl}/monitoring/${serviceId}` }]);
+    }
+    if (baseUrl && serviceUrl) {
+      keyboard.inline_keyboard.push([
+        { text: '🌐 Open URL', url: serviceUrl },
+        { text: '📈 Status Page', url: baseUrl },
+      ]);
+    }
 
-    const message = `${statusEmoji} *SERVICE DOWN ALERT*
-
-━━━━━━━━━━━━━━━━━━━━
-
-🏷️ *Service:* \`${service.name}\`
-
-🌐 *Endpoint:*
-\`${service.url}\`
-
-📊 *Details:*
-• Method: \`${service.method}\`
-• Expected: \`${service.expectedStatus}\`
-• Received: \`${incident.statusCode || 'Connection Failed'}\`
-• ${timeEmoji} Response: \`${incident.responseTime}ms\`
-
-❌ *Error:*
-\`${incident.error || 'Unexpected status code'}\`
-
-🕐 *Time:*
-\`${new Date().toLocaleString('en-US', {
-      timeZone: 'Asia/Tehran',
-      dateStyle: 'medium',
-      timeStyle: 'medium',
-    })}\`
-
-━━━━━━━━━━━━━━━━━━━━`;
-
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: '📊 View Details', url: `${baseUrl}/monitoring/${service.id}` }],
-        [
-          { text: '🌐 Open URL', url: service.url },
-          { text: '📈 Status Page', url: baseUrl },
-        ],
-      ],
+    const payload: Record<string, any> = {
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true,
     };
 
-    const response = await fetch(
-      `https://api.telegram.org/bot${config.botToken}/sendMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: config.chatId,
-          text: message,
-          parse_mode: 'Markdown',
-          reply_markup: keyboard,
-          disable_web_page_preview: true,
-        }),
-      }
-    );
+    if (keyboard.inline_keyboard.length > 0) {
+      payload.reply_markup = keyboard;
+    }
+
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Telegram API error: ${response.status} - ${error}`);
+      const errorText = await response.text();
+      throw new Error(`Telegram API error: ${response.status} - ${errorText}`);
+    }
+  }
+
+  static async sendDocument(
+    botToken: string,
+    chatId: string,
+    documentContent: string,
+    filename: string = 'monitorflare-backup.json',
+    caption: string = '📦 MonitorFlare System Backup'
+  ): Promise<void> {
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('caption', caption);
+
+    const file = new File([documentContent], filename, { type: 'application/json' });
+    formData.append('document', file);
+
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Telegram sendDocument error: ${response.status} - ${errorText}`);
     }
   }
 }

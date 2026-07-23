@@ -34,6 +34,10 @@ export class NotificationRepository {
     }));
   }
 
+  async getNotifications(): Promise<Notification[]> {
+    return this.getAllNotifications();
+  }
+
   async getNotificationById(id: string): Promise<Notification | null> {
     const result = await this.db
       .select()

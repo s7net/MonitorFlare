@@ -12,7 +12,8 @@ export class HealthRepository {
     status: 'healthy' | 'unhealthy',
     responseTime: number,
     statusCode?: number,
-    error?: string
+    error?: string,
+    region?: string
   ): Promise<HealthCheck> {
     const check = {
       id: crypto.randomUUID(),
@@ -21,16 +22,17 @@ export class HealthRepository {
       responseTime,
       statusCode: statusCode ?? null,
       error: error ?? null,
+      region: region ?? null,
       timestamp: new Date(),
     };
 
     await this.db.insert(healthChecks).values(check);
-    
-    // Return with undefined instead of null for consistency
+
     return {
       ...check,
       statusCode: statusCode ?? undefined,
       error: error ?? undefined,
+      region: region ?? undefined,
     } as HealthCheck;
   }
 
@@ -46,11 +48,11 @@ export class HealthRepository {
       .limit(limit)
       .all();
 
-    // Map null to undefined
     return results.map(check => ({
       ...check,
       statusCode: check.statusCode ?? undefined,
       error: check.error ?? undefined,
+      region: check.region ?? undefined,
     })) as HealthCheck[];
   }
 

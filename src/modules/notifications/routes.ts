@@ -5,12 +5,14 @@ import { NotificationService } from './service';
 import { ResponseHelper } from '@/shared/response';
 import { TelegramProvider } from './providers/telegram';
 import { SlackProvider } from './providers/slack';
+import type { Service, Env } from '@/shared/types';
 
 export const notificationRoutes = new Elysia({ prefix: '/api' })
   .derive(({ store }) => {
-    const db = createDatabase((store as any).DB);
+    const env = store as unknown as Env;
+    const db = createDatabase(env.DB);
     const repository = new NotificationRepository(db);
-    const service = new NotificationService(repository);
+    const service = new NotificationService(repository, env);
     return { notificationService: service, notificationRepository: repository };
   })
 
@@ -77,13 +79,16 @@ export const notificationRoutes = new Elysia({ prefix: '/api' })
         return { success: false, error: 'Notification not found' };
       }
 
-      const testService = {
+      const testService: Service = {
         id: 'test',
         name: 'Test Service',
         url: 'https://example.com',
         method: 'GET',
         timeout: 10000,
         expectedStatus: 200,
+        checkType: 'direct',
+        checkRegions: null,
+        showUrl: true,
         createdAt: new Date(),
       };
 
@@ -96,7 +101,19 @@ export const notificationRoutes = new Elysia({ prefix: '/api' })
       const baseUrl = (store as any).BASE_URL || 'http://localhost:3000';
 
       if (notification.type === 'telegram') {
-        await TelegramProvider.send(notification.config as any, testService, testIncident, baseUrl);
+        const botToken = notification.config?.botToken;
+        const chatId = notification.config?.chatId;
+        if (!botToken || !chatId) {
+          return { success: false, error: 'Missing Telegram botToken or chatId' };
+        }
+        await TelegramProvider.sendMessage(
+          botToken,
+          chatId,
+          '🔔 *TEST NOTIFICATION*\n\nYour MonitorFlare Telegram integration is working perfectly!',
+          baseUrl,
+          testService.id,
+          testService.url
+        );
       } else if (notification.type === 'slack') {
         await SlackProvider.send(notification.config as any, testService, testIncident, baseUrl);
       }

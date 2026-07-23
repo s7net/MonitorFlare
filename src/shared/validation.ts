@@ -2,11 +2,18 @@ import { ValidationError } from './errors';
 
 export class Validator {
   static isValidUrl(url: string): boolean {
+    if (!url || !url.trim()) return false;
+    const target = url.trim();
     try {
-      new URL(url);
+      new URL(target);
       return true;
     } catch {
-      return false;
+      try {
+        new URL(`https://${target}`);
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 
@@ -26,7 +33,7 @@ export class Validator {
     }
 
     if (data.url !== undefined && !this.isValidUrl(data.url)) {
-      throw new ValidationError('Invalid URL format');
+      throw new ValidationError('Invalid target URL or Host format');
     }
 
     if (data.method !== undefined && !this.isValidMethod(data.method)) {

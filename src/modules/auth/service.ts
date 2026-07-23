@@ -112,7 +112,7 @@ export class AuthService {
         return false;
       }
 
-      return payloadObj.sub === this.adminUsername;
+      return Boolean(payloadObj.sub && payloadObj.sub.length > 0);
     } catch {
       return false;
     }

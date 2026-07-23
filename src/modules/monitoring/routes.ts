@@ -9,13 +9,19 @@ import { ResponseHelper } from '@/shared/response';
 import type { Env } from '@/shared/types';
 
 export const monitoringRoutes = new Elysia({ prefix: '/api' })
-  .derive(({ store }) => {
+  .derive(async ({ store }) => {
     const env = store as unknown as Env;
     const db = createDatabase(env.DB);
     const repository = new MonitoringRepository(db);
     const service = new MonitoringService(repository);
     const healthRepository = new HealthRepository(db);
     const authService = new AuthService(env);
+    try {
+      const settingsRepo = new (await import('../settings/repository')).SettingsRepository(db);
+      const settings = await settingsRepo.getAllSettings();
+      if (settings.adminUsername) authService.adminUsername = settings.adminUsername;
+      if (settings.adminPasswordHash) authService.adminPasswordHash = settings.adminPasswordHash;
+    } catch {}
     return { monitoringRepository: repository, monitoringService: service, healthRepository, authService };
   })
 

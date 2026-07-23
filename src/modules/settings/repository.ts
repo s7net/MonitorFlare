@@ -68,6 +68,7 @@ export class SettingsRepository {
         baseUrl: map.get('base_url') || DEFAULT_SETTINGS.baseUrl,
         cfApiToken: map.get('cf_api_token') || '',
         cfAccountId: map.get('cf_account_id') || '',
+        cfWorkerName: map.get('cf_worker_name') || '',
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -97,6 +98,7 @@ export class SettingsRepository {
       baseUrl: 'base_url',
       cfApiToken: 'cf_api_token',
       cfAccountId: 'cf_account_id',
+      cfWorkerName: 'cf_worker_name',
     };
 
     for (const [prop, val] of Object.entries(newSettings)) {

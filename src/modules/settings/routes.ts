@@ -196,9 +196,12 @@ export const settingsRoutes = new Elysia({ prefix: '/api' })
         }
       }
 
-      // 3. Determine exact active Worker script name from host header
-      const host = (headers['host'] || headers['x-forwarded-host'] || '').split(':')[0];
-      let scriptName = host.split('.')[0] || '';
+      // 3. Determine exact active Worker script name (Settings or Host Header)
+      let scriptName = (settings.cfWorkerName || '').trim();
+      if (!scriptName) {
+        const host = (headers['host'] || headers['x-forwarded-host'] || '').split(':')[0];
+        scriptName = host.split('.')[0] || '';
+      }
 
       // Fallback: search Cloudflare scripts list if host is localhost or custom domain
       if (!scriptName || scriptName === 'localhost' || scriptName === '127') {

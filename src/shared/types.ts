@@ -137,4 +137,5 @@ export interface SystemSettings {
   baseUrl?: string;
   cfApiToken?: string;
   cfAccountId?: string;
+  cfWorkerName?: string;
 }

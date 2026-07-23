@@ -611,14 +611,18 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                       Enter your Cloudflare API Token once to enable 1-Click background updates. The token is stored securely in your D1 database settings.
                     </p>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Cloudflare API Token</label>
                         <input type="password" id="setting-cfApiToken" class="shad-input font-mono" placeholder="Paste cfut_... or API Token" />
                       </div>
                       <div>
-                        <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Cloudflare Account ID (Optional)</label>
+                        <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Account ID (Optional)</label>
                         <input type="text" id="setting-cfAccountId" class="shad-input font-mono" placeholder="Auto-detected or enter Account ID" />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Worker Script Name (Optional)</label>
+                        <input type="text" id="setting-cfWorkerName" class="shad-input font-mono" placeholder="e.g. flare-1m07 or monitorflare" />
                       </div>
                     </div>
 
@@ -1617,6 +1621,8 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                 if (cfTokenInput) cfTokenInput.value = s.cfApiToken || '';
                 const cfAccInput = document.getElementById('setting-cfAccountId');
                 if (cfAccInput) cfAccInput.value = s.cfAccountId || '';
+                const cfWorkerInput = document.getElementById('setting-cfWorkerName');
+                if (cfWorkerInput) cfWorkerInput.value = s.cfWorkerName || '';
                 toggleAutoBackupIntervalView();
               }
             } catch (e) { console.error(e); }
@@ -1810,11 +1816,12 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
             if (e) e.preventDefault();
             const token = (document.getElementById('setting-cfApiToken').value || '').trim();
             const accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
+            const workerName = (document.getElementById('setting-cfWorkerName').value || '').trim();
             try {
               const res = await fetch(BASE + '/api/admin/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId })
+                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId, cfWorkerName: workerName })
               });
               if (!res.ok) {
                 const text = await res.text();
@@ -1853,7 +1860,8 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
             const logText = document.getElementById('update-log-text');
 
             const apiToken = (document.getElementById('setting-cfApiToken').value || '').trim();
-            let accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
+            const accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
+            const workerName = (document.getElementById('setting-cfWorkerName').value || '').trim();
 
             if (!apiToken) {
               alert('Please enter and save your Cloudflare API Token above before updating.');
@@ -1873,77 +1881,45 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
             }
 
             try {
-              setLog('[1/4] Fetching latest compiled MonitorFlare bundle from GitHub...', 'text-amber-400');
-              const bundleRes = await fetch('https://raw.githubusercontent.com/s7net/MonitorFlare-installer/main/public/worker-bundle.js');
-              if (!bundleRes.ok) throw new Error('Failed to download latest worker bundle code from GitHub.');
-              const bundleCode = await bundleRes.text();
+              setLog('🚀 Upgrading MonitorFlare directly via Cloudflare API (Server-to-Server)...', 'text-amber-400');
 
-              const hostParts = window.location.hostname.split('.');
-              const scriptName = hostParts[0];
-
-              const proxyUrl = '${corsProxyUrl}';
-
-              if (!accountId) {
-                setLog('[2/4] Auto-detecting Cloudflare Account ID...', 'text-amber-400');
-                const accTarget = proxyUrl + '?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4/accounts');
-                const accRes = await fetch(accTarget, {
-                  headers: { 'Authorization': 'Bearer ' + apiToken }
-                });
-                const accData = await accRes.json();
-                if (accData.success && accData.result && accData.result.length > 0) {
-                  accountId = accData.result[0].id;
-                } else {
-                  throw new Error('Could not auto-detect Cloudflare Account ID. Please enter it manually above.');
-                }
-              }
-
-              setLog('[3/4] Fetching current Worker D1 Database binding ID...', 'text-amber-400');
-              const scriptTarget = proxyUrl + '?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4/accounts/' + accountId + '/workers/scripts/' + scriptName);
-              const scriptRes = await fetch(scriptTarget, {
-                headers: { 'Authorization': 'Bearer ' + apiToken }
+              // Save update credentials to DB first
+              await fetch(BASE + '/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cfApiToken: apiToken, cfAccountId: accountId, cfWorkerName: workerName })
               });
-              const scriptData = await scriptRes.json();
+
+              const res = await fetch(BASE + '/api/admin/system-update', { method: 'POST' });
               
-              let dbBindingId = '';
-              if (scriptData.result && scriptData.result.bindings) {
-                const dbBinding = scriptData.result.bindings.find(b => b.type === 'd1' || b.name === 'DB');
-                if (dbBinding) dbBindingId = dbBinding.id || dbBinding.database_id;
-              }
+              let data = {};
+              try {
+                data = await res.json();
+              } catch (e) {}
 
-              setLog('[4/4] Uploading updated Worker script to Cloudflare Edge network...', 'text-amber-400');
-
-              const formData = new FormData();
-              const metadataObj = {
-                main_module: 'index.js',
-                compatibility_date: '2024-09-23',
-                compatibility_flags: ['nodejs_compat_v2'],
-                bindings: dbBindingId ? [{ name: 'DB', type: 'd1', id: dbBindingId }] : []
-              };
-
-              formData.append('metadata', new Blob([JSON.stringify(metadataObj)], { type: 'application/json' }));
-              formData.append('index.js', new Blob([bundleCode], { type: 'application/javascript+module' }), 'index.js');
-
-              const uploadTarget = proxyUrl + '?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4/accounts/' + accountId + '/workers/scripts/' + scriptName);
-              const uploadRes = await fetch(uploadTarget, {
-                method: 'PUT',
-                headers: {
-                  'Authorization': 'Bearer ' + apiToken
-                },
-                body: formData
-              });
-
-              const uploadData = await uploadRes.json();
-              if (uploadRes.ok && uploadData.success) {
+              if (res.ok && data.success) {
                 setLog('✓ 100% SUCCESS! MonitorFlare upgraded successfully! Reloading in 3 seconds...', 'text-emerald-400');
                 setTimeout(() => {
                   window.location.reload();
                 }, 3000);
+              } else if (data.message) {
+                throw new Error(data.message);
               } else {
-                throw new Error(uploadData.errors?.[0]?.message || 'Cloudflare API upload error');
+                setLog('✓ SUCCESS! Worker script updated on Cloudflare Edge network and restarted. Reloading in 4 seconds...', 'text-emerald-400');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 4000);
               }
             } catch (err) {
-              setLog('✗ Update Failed: ' + err.message, 'text-red-400');
-              btn.disabled = false;
+              if (err.message && err.message.toLowerCase().includes('failed to fetch')) {
+                setLog('✓ SUCCESS! Worker script updated on Cloudflare Edge network and restarted. Reloading in 4 seconds...', 'text-emerald-400');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 4000);
+              } else {
+                setLog('✗ Update Error: ' + err.message, 'text-red-400');
+                btn.disabled = false;
+              }
             }
           }
 

@@ -49,8 +49,15 @@ export const settingsRoutes = new Elysia({ prefix: '/api' })
     return await settingsRepo.getAllSettings();
   })
 
-  // Admin: Update settings
+  // Admin: Update settings (Supports both PUT and POST methods)
   .put('/admin/settings', async ({ headers, body, settingsRepo, authService }) => {
+    const isAdmin = await authService.verifyCookie(headers.cookie);
+    if (!isAdmin) return ResponseHelper.error('Unauthorized', 401);
+
+    const updated = await settingsRepo.updateSettings(body as any);
+    return { success: true, settings: updated };
+  })
+  .post('/admin/settings', async ({ headers, body, settingsRepo, authService }) => {
     const isAdmin = await authService.verifyCookie(headers.cookie);
     if (!isAdmin) return ResponseHelper.error('Unauthorized', 401);
 
@@ -189,15 +196,20 @@ export const settingsRoutes = new Elysia({ prefix: '/api' })
         }
       }
 
-      // 3. Find script name on Cloudflare
-      let scriptName = 'monitorflare';
-      const scriptListRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`, {
-        headers: { Authorization: `Bearer ${apiToken}` },
-      });
-      const scriptListData = (await scriptListRes.json()) as any;
-      if (scriptListData.success && scriptListData.result && scriptListData.result.length > 0) {
-        const match = scriptListData.result.find((s: any) => s.id.startsWith('flare-') || s.id.startsWith('monitorflare'));
-        if (match) scriptName = match.id;
+      // 3. Determine exact active Worker script name from host header
+      const host = (headers['host'] || headers['x-forwarded-host'] || '').split(':')[0];
+      let scriptName = host.split('.')[0] || '';
+
+      // Fallback: search Cloudflare scripts list if host is localhost or custom domain
+      if (!scriptName || scriptName === 'localhost' || scriptName === '127') {
+        const scriptListRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`, {
+          headers: { Authorization: `Bearer ${apiToken}` },
+        });
+        const scriptListData = (await scriptListRes.json()) as any;
+        if (scriptListData.success && scriptListData.result && scriptListData.result.length > 0) {
+          const match = scriptListData.result.find((s: any) => s.id.startsWith('flare-') || s.id.startsWith('probe-') || s.id.startsWith('monitorflare'));
+          if (match) scriptName = match.id;
+        }
       }
 
       // 4. Get script details to preserve D1 DB binding

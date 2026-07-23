@@ -1816,6 +1816,13 @@ export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'htt
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId })
               });
+              if (!res.ok) {
+                const text = await res.text();
+                let errMsg = 'Failed to save credentials';
+                try { const data = JSON.parse(text); errMsg = data.message || data.error || errMsg; } catch {}
+                alert('✗ ' + errMsg);
+                return;
+              }
               const data = await res.json();
               if (data.success) {
                 alert('✓ Cloudflare Update Credentials Saved Successfully!');

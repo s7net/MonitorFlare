@@ -4,7 +4,7 @@ import type { Env } from '@/shared/types';
 const failedAttemptsMap = new Map<string, { count: number; resetAt: number }>();
 
 export class AuthService {
-  private adminPasswordHash?: string;
+  public adminPasswordHash?: string;
   private adminPasswordFallback?: string;
   private sessionSecret: string;
   // Set after loading from DB; defaults to 'admin' for backward compatibility

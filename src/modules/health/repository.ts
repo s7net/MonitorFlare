@@ -45,8 +45,7 @@ export class HealthRepository {
       .from(healthChecks)
       .where(eq(healthChecks.serviceId, serviceId))
       .orderBy(desc(healthChecks.timestamp))
-      .limit(limit)
-      .all();
+      .limit(limit);
 
     return results.map(check => ({
       ...check,

@@ -133,7 +133,7 @@ export class MonitoringRepository {
   }
 
   async getAllServices(): Promise<Service[]> {
-    const rows = await this.db.select().from(services).all();
+    const rows = await this.db.select().from(services);
     return rows.map(r => this.mapRowToService(r));
   }
 

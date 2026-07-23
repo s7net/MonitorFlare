@@ -27,7 +27,7 @@ export class IncidentsRepository {
   }
 
   async getAllIncidents(): Promise<Incident[]> {
-    const rows = await this.db.select().from(incidents).orderBy(desc(incidents.createdAt)).all();
+    const rows = await this.db.select().from(incidents).orderBy(desc(incidents.createdAt));
     return rows.map(r => ({
       ...r,
       isActive: Boolean(r.isActive),
@@ -39,8 +39,7 @@ export class IncidentsRepository {
       .select()
       .from(incidents)
       .where(eq(incidents.isActive, true))
-      .orderBy(desc(incidents.createdAt))
-      .all();
+      .orderBy(desc(incidents.createdAt));
 
     return rows.map(r => ({
       ...r,

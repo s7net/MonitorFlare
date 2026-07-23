@@ -14,9 +14,12 @@ export const authRoutes = new Elysia({ prefix: '/api' })
     const db = createDatabase(env.DB);
     const authService = new AuthService(env);
     const settingsRepository = new SettingsRepository(db);
-    // Load adminUsername from DB (set during installation)
+    // Load adminUsername and adminPasswordHash from DB (set during installation)
     const settings = await settingsRepository.getAllSettings();
     authService.adminUsername = settings.adminUsername || 'admin';
+    if (settings.adminPasswordHash) {
+      authService.adminPasswordHash = settings.adminPasswordHash;
+    }
     return { authService, settingsRepository, env };
   })
 

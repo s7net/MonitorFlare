@@ -132,6 +132,7 @@ export interface SystemSettings {
   totpSecret?: string;
   // Stored in DB (not wrangler.toml)
   adminUsername?: string;
+  adminPasswordHash?: string;
   adminPanelPath?: string;
   baseUrl?: string;
 }

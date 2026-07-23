@@ -27,7 +27,7 @@ export class NotificationRepository {
   }
 
   async getAllNotifications(): Promise<Notification[]> {
-    const results = await this.db.select().from(notifications).all();
+    const results = await this.db.select().from(notifications);
     return results.map(n => ({
       ...n,
       config: JSON.parse(n.config),
@@ -81,8 +81,7 @@ export class NotificationRepository {
     const results = await this.db
       .select()
       .from(notifications)
-      .where(eq(notifications.enabled, true))
-      .all();
+      .where(eq(notifications.enabled, true));
 
     return results.map(n => ({
       ...n,

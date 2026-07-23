@@ -33,6 +33,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   totpEnabled: false,
   totpSecret: '',
   adminUsername: 'admin',
+  adminPasswordHash: '',
   adminPanelPath: '/manage-x7k9',
   baseUrl: '',
 };
@@ -42,7 +43,7 @@ export class SettingsRepository {
 
   async getAllSettings(): Promise<SystemSettings> {
     try {
-      const rows = await this.db.select().from(settings).all();
+      const rows = await this.db.select().from(settings);
       const map = new Map(rows.map(r => [r.key, r.value]));
 
       return {
@@ -62,6 +63,7 @@ export class SettingsRepository {
         totpEnabled: map.get('totp_enabled') === 'true' || map.get('totp_enabled') === '1',
         totpSecret: map.get('totp_secret') || '',
         adminUsername: map.get('admin_username') || DEFAULT_SETTINGS.adminUsername,
+        adminPasswordHash: map.get('admin_password_hash') || '',
         adminPanelPath: map.get('admin_panel_path') || DEFAULT_SETTINGS.adminPanelPath,
         baseUrl: map.get('base_url') || DEFAULT_SETTINGS.baseUrl,
       };
@@ -88,6 +90,7 @@ export class SettingsRepository {
       totpEnabled: 'totp_enabled',
       totpSecret: 'totp_secret',
       adminUsername: 'admin_username',
+      adminPasswordHash: 'admin_password_hash',
       adminPanelPath: 'admin_panel_path',
       baseUrl: 'base_url',
     };

@@ -66,7 +66,7 @@ export const uiRoutes = new Elysia({ aot: false })
       }
       set.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0';
       set.headers['Pragma'] = 'no-cache';
-      return html(<AdminDashboard adminPath={adminPath} />);
+      return html(<AdminDashboard adminPath={adminPath} corsProxyUrl={env.CORS_PROXY_URL} />);
     }
 
     if (path.startsWith('/monitoring/')) {

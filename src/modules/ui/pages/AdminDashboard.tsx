@@ -1,6 +1,6 @@
 import { Html } from '@elysiajs/html';
 
-export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: string }) {
+export function AdminDashboard({ adminPath = '/manage-x7k9', corsProxyUrl = 'https://monitorflare-cors-proxy.glynet.org' }: { adminPath?: string; corsProxyUrl?: string }) {
   return (
     <html lang="en" data-theme="system">
       <head>
@@ -265,6 +265,13 @@ export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: str
                 <div class="flex items-center gap-2.5">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                   <span>Backup & Restore</span>
+                </div>
+              </button>
+
+              <button class="cf-sidebar-item" onclick="switchTab('updates', event)">
+                <div class="flex items-center gap-2.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                  <span>System Updates</span>
                 </div>
               </button>
             </nav>
@@ -575,6 +582,81 @@ export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: str
                   </div>
                 </div>
               </div>
+
+              {/* TAB 9: SYSTEM UPDATES */}
+              <div id="tab-updates" class="tab-content">
+                <div class="shad-card p-6">
+                  <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+                    <div>
+                      <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
+                        <span>🚀 1-Click System Updates</span>
+                      </h1>
+                      <p class="text-xs text-[hsl(var(--muted-foreground))] mt-1 leading-relaxed">
+                        Upgrade MonitorFlare to the latest release directly from your admin panel without touching Wrangler CLI or redeploying manually.
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-xs font-mono font-semibold">
+                        System Version: v1.3.0
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Cloudflare Update Credentials Setup Card */}
+                  <div class="p-5 rounded-lg border border-[hsl(var(--border))] bg-muted/40 mb-6 space-y-4">
+                    <h3 class="text-sm font-bold tracking-tight flex items-center gap-2">
+                      <span>🔑 Cloudflare Update Authorization</span>
+                    </h3>
+                    <p class="text-xs text-[hsl(var(--muted-foreground))] leading-relaxed m-0">
+                      Enter your Cloudflare API Token once to enable 1-Click background updates. The token is stored securely in your D1 database settings.
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Cloudflare API Token</label>
+                        <input type="password" id="setting-cfApiToken" class="shad-input font-mono" placeholder="Paste cfut_... or API Token" />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-1.5">Cloudflare Account ID (Optional)</label>
+                        <input type="text" id="setting-cfAccountId" class="shad-input font-mono" placeholder="Auto-detected or enter Account ID" />
+                      </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                      <button onclick="saveUpdateToken(event)" class="shad-btn shad-btn-primary text-xs">
+                        💾 Save Cloudflare Update Credentials
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* One Click Upgrade Panel */}
+                  <div class="p-6 rounded-xl border border-brand/40 bg-muted/30 space-y-4">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                      <div>
+                        <h3 class="text-base font-bold text-foreground flex items-center gap-2 m-0">
+                          ⚡️ Upgrade MonitorFlare Engine
+                        </h3>
+                        <p class="text-xs text-[hsl(var(--muted-foreground))] mt-1 m-0">
+                          Fetches the latest pre-compiled MonitorFlare bundle from GitHub releases and updates your Cloudflare Worker in ~3 seconds.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div id="update-status-log" class="hidden p-3 rounded-lg bg-black/80 border border-zinc-700 font-mono text-xs space-y-1">
+                      <div id="update-log-text" class="text-amber-400">Ready to update.</div>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-2">
+                      <button id="run-update-btn" onclick="runOneClickUpdate()" class="shad-btn shad-btn-primary px-6 py-2.5 font-bold text-xs flex items-center gap-2">
+                        <span>🚀 Run 1-Click System Update Now</span>
+                      </button>
+                      <button onclick="checkLatestRelease()" class="shad-btn text-xs">
+                        🔍 Check Latest GitHub Release
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </main>
         </div>
@@ -876,6 +958,7 @@ export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: str
             templates: 'Message Templates',
             incidents: 'Incident Banners',
             backup: 'Backup & Restore',
+            updates: 'System Updates & Upgrades',
           };
 
           function switchTab(tabName, event) {
@@ -895,7 +978,7 @@ export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: str
 
             if (tabName === 'services') loadServices();
             if (tabName === 'notifications') loadNotifs();
-            if (tabName === 'brand' || tabName === 'templates' || tabName === 'backup') loadSettings();
+            if (tabName === 'brand' || tabName === 'templates' || tabName === 'backup' || tabName === 'updates') loadSettings();
             if (tabName === 'security') load2FAStatus();
             if (tabName === 'incidents') loadIncidents();
           }
@@ -1515,6 +1598,10 @@ export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: str
                 if (lastBackupStatusBox) {
                   lastBackupStatusBox.textContent = s.lastBackupAt ? ('Last auto-backup sent: ' + new Date(s.lastBackupAt).toLocaleString()) : 'Never sent yet';
                 }
+                const cfTokenInput = document.getElementById('setting-cfApiToken');
+                if (cfTokenInput) cfTokenInput.value = s.cfApiToken || '';
+                const cfAccInput = document.getElementById('setting-cfAccountId');
+                if (cfAccInput) cfAccInput.value = s.cfAccountId || '';
                 toggleAutoBackupIntervalView();
               }
             } catch (e) { console.error(e); }
@@ -1701,6 +1788,140 @@ export function AdminDashboard({ adminPath = '/manage-x7k9' }: { adminPath?: str
               }
             } catch (e) {
               alert('Error parsing or uploading backup file');
+            }
+          }
+
+          async function saveUpdateToken(e) {
+            if (e) e.preventDefault();
+            const token = (document.getElementById('setting-cfApiToken').value || '').trim();
+            const accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
+            try {
+              const res = await fetch(BASE + '/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cfApiToken: token, cfAccountId: accountId })
+              });
+              const data = await res.json();
+              if (data.success) {
+                alert('✓ Cloudflare Update Credentials Saved Successfully!');
+              } else {
+                alert('Error saving credentials: ' + (data.message || 'Unknown error'));
+              }
+            } catch (err) {
+              alert('Error: ' + err.message);
+            }
+          }
+
+          async function checkLatestRelease() {
+            try {
+              const res = await fetch('https://raw.githubusercontent.com/s7net/MonitorFlare-installer/main/public/worker-bundle.js', { method: 'HEAD' });
+              if (res.ok) {
+                alert('✓ Latest MonitorFlare release is active on GitHub and ready for 1-Click Update!');
+              } else {
+                alert('Could not verify latest GitHub bundle release.');
+              }
+            } catch (err) {
+              alert('Error checking release: ' + err.message);
+            }
+          }
+
+          async function runOneClickUpdate() {
+            const btn = document.getElementById('run-update-btn');
+            const logBox = document.getElementById('update-status-log');
+            const logText = document.getElementById('update-log-text');
+
+            const apiToken = (document.getElementById('setting-cfApiToken').value || '').trim();
+            let accountId = (document.getElementById('setting-cfAccountId').value || '').trim();
+
+            if (!apiToken) {
+              alert('Please enter and save your Cloudflare API Token above before updating.');
+              return;
+            }
+
+            if (!confirm('Are you sure you want to upgrade MonitorFlare Worker to the latest version? Your monitors, settings, and database data will remain 100% intact.')) {
+              return;
+            }
+
+            btn.disabled = true;
+            logBox.classList.remove('hidden');
+
+            function setLog(msg, colorClass) {
+              logText.className = colorClass || 'text-amber-400';
+              logText.innerText = msg;
+            }
+
+            try {
+              setLog('[1/4] Fetching latest compiled MonitorFlare bundle from GitHub...', 'text-amber-400');
+              const bundleRes = await fetch('https://raw.githubusercontent.com/s7net/MonitorFlare-installer/main/public/worker-bundle.js');
+              if (!bundleRes.ok) throw new Error('Failed to download latest worker bundle code from GitHub.');
+              const bundleCode = await bundleRes.text();
+
+              const hostParts = window.location.hostname.split('.');
+              const scriptName = hostParts[0];
+
+              const proxyUrl = '${corsProxyUrl}';
+
+              if (!accountId) {
+                setLog('[2/4] Auto-detecting Cloudflare Account ID...', 'text-amber-400');
+                const accTarget = proxyUrl + '?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4/accounts');
+                const accRes = await fetch(accTarget, {
+                  headers: { 'Authorization': 'Bearer ' + apiToken }
+                });
+                const accData = await accRes.json();
+                if (accData.success && accData.result && accData.result.length > 0) {
+                  accountId = accData.result[0].id;
+                } else {
+                  throw new Error('Could not auto-detect Cloudflare Account ID. Please enter it manually above.');
+                }
+              }
+
+              setLog('[3/4] Fetching current Worker D1 Database binding ID...', 'text-amber-400');
+              const scriptTarget = proxyUrl + '?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4/accounts/' + accountId + '/workers/scripts/' + scriptName);
+              const scriptRes = await fetch(scriptTarget, {
+                headers: { 'Authorization': 'Bearer ' + apiToken }
+              });
+              const scriptData = await scriptRes.json();
+              
+              let dbBindingId = '';
+              if (scriptData.result && scriptData.result.bindings) {
+                const dbBinding = scriptData.result.bindings.find(b => b.type === 'd1' || b.name === 'DB');
+                if (dbBinding) dbBindingId = dbBinding.id || dbBinding.database_id;
+              }
+
+              setLog('[4/4] Uploading updated Worker script to Cloudflare Edge network...', 'text-amber-400');
+
+              const formData = new FormData();
+              const metadataObj = {
+                main_module: 'index.js',
+                compatibility_date: '2024-09-23',
+                compatibility_flags: ['nodejs_compat_v2'],
+                bindings: dbBindingId ? [{ name: 'DB', type: 'd1', id: dbBindingId }] : []
+              };
+
+              formData.append('metadata', new Blob([JSON.stringify(metadataObj)], { type: 'application/json' }));
+              formData.append('index.js', new Blob([bundleCode], { type: 'application/javascript+module' }), 'index.js');
+
+              const uploadTarget = proxyUrl + '?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4/accounts/' + accountId + '/workers/scripts/' + scriptName);
+              const uploadRes = await fetch(uploadTarget, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': 'Bearer ' + apiToken
+                },
+                body: formData
+              });
+
+              const uploadData = await uploadRes.json();
+              if (uploadRes.ok && uploadData.success) {
+                setLog('✓ 100% SUCCESS! MonitorFlare upgraded successfully! Reloading in 3 seconds...', 'text-emerald-400');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 3000);
+              } else {
+                throw new Error(uploadData.errors?.[0]?.message || 'Cloudflare API upload error');
+              }
+            } catch (err) {
+              setLog('✗ Update Failed: ' + err.message, 'text-red-400');
+              btn.disabled = false;
             }
           }
 

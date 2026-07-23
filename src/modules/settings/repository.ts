@@ -66,6 +66,8 @@ export class SettingsRepository {
         adminPasswordHash: map.get('admin_password_hash') || '',
         adminPanelPath: map.get('admin_panel_path') || DEFAULT_SETTINGS.adminPanelPath,
         baseUrl: map.get('base_url') || DEFAULT_SETTINGS.baseUrl,
+        cfApiToken: map.get('cf_api_token') || '',
+        cfAccountId: map.get('cf_account_id') || '',
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -93,6 +95,8 @@ export class SettingsRepository {
       adminPasswordHash: 'admin_password_hash',
       adminPanelPath: 'admin_panel_path',
       baseUrl: 'base_url',
+      cfApiToken: 'cf_api_token',
+      cfAccountId: 'cf_account_id',
     };
 
     for (const [prop, val] of Object.entries(newSettings)) {

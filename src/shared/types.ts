@@ -135,4 +135,6 @@ export interface SystemSettings {
   adminPasswordHash?: string;
   adminPanelPath?: string;
   baseUrl?: string;
+  cfApiToken?: string;
+  cfAccountId?: string;
 }
